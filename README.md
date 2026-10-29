@@ -2,7 +2,7 @@
 
 **Drop a brief. The form fills itself.**
 
-![Drop & Fill preview](preview.jpg)
+![Drop & Fill preview](preview.gif)
 
 **Live demo:** [veraetogrex-portfolio.github.io/drop-fill](https://veraetogrex-portfolio.github.io/drop-fill/) · **Mockup:** [full-screen version](https://veraetogrex-portfolio.github.io/drop-fill/mockup/drop-fill.html)
 
