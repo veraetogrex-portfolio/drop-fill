@@ -1,0 +1,164 @@
+/* Drop & Fill — github.com/veraetogrex-portfolio · zero dependencies */
+:root {
+  --bg: #07080c;
+  --panel: #0e1016;
+  --line: rgba(255, 255, 255, .14);
+  --text: #f2f3f7;
+  --muted: #a4a7b6;
+  --dim: #7f8293;
+  --pulse: #7c6cff;
+  --pulse-btn: #6a5af9;
+  --ok: #3fe0d0;
+  --warn: #ff7a45;
+  --paper: #f4f5f8;
+  --mono: ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100vh; display: grid; place-items: center; overflow: hidden;
+  background: radial-gradient(70% 60% at 50% 50%, #0c0e15, var(--bg) 75%);
+  color: var(--text); font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+button, input { font: inherit; color: inherit; }
+p, h1, h2 { margin: 0; }
+
+.df { position: relative; width: 1240px; height: 780px; }
+@media (max-width: 600px) { .df { zoom: .3; } }
+
+/* ── stepper ─────────────────────────────────────────── */
+.df-steps { position: absolute; left: 0; right: 0; top: 0; height: 56px; margin: 0; padding: 0; list-style: none; display: flex; justify-content: center; align-items: center; gap: 110px; }
+.df-steps li { position: relative; display: flex; align-items: center; gap: 14px; font-weight: 600; font-size: 21px; color: var(--dim); transition: color .35s; }
+.df-steps li + li::before { content: ""; position: absolute; right: calc(100% + 22px); width: 66px; height: 2px; background: var(--line); }
+.df-steps i { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 18px; border: 1.5px solid var(--line); transition: all .35s; }
+.df-steps .is-on { color: var(--text); }
+.df-steps .is-on i { border-color: var(--pulse); background: rgba(124, 108, 255, .16); box-shadow: 0 0 0 5px rgba(124, 108, 255, .12), 0 0 24px rgba(124, 108, 255, .35); }
+.df-steps .is-done i { border-color: var(--ok); background: var(--ok); color: #04231f; font-size: 0; }
+.df-steps .is-done i::after { content: "✓"; font-size: 20px; }
+.df-steps .is-done + li::before { background: linear-gradient(90deg, var(--ok), var(--pulse)); }
+
+/* ── the file ────────────────────────────────────────── */
+.df-file { position: absolute; left: 0; top: 566px; width: 144px; text-align: center; cursor: grab; touch-action: none; outline: none; z-index: 5; }
+.df-thumb {
+  position: relative; width: 132px; height: 170px; margin: 0 auto; border-radius: 10px; background: var(--paper);
+  clip-path: polygon(0 0, calc(100% - 30px) 0, 100% 30px, 100% 100%, 0 100%);
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, .8); transition: transform .25s;
+}
+.df-thumb i { display: block; height: 6px; margin: 16px 0 0 16px; border-radius: 3px; background: #c9ccd8; width: 84px; }
+.df-thumb i + i { margin-top: 10px; }
+.df-thumb i:first-child { margin-top: 22px; width: 58px; background: #9ca0b2; }
+.df-thumb b { position: absolute; left: 14px; bottom: 16px; padding: 4px 10px; border-radius: 7px; background: var(--pulse-btn); color: #fff; font-size: 15px; letter-spacing: .06em; }
+.df-file span { display: block; margin-top: 12px; font: 500 15px var(--mono); color: var(--muted); }
+.df-file.is-drag { cursor: grabbing; }
+.df-file.is-drag .df-thumb { transform: rotate(-5deg) scale(1.06); }
+.df-file.is-drag span { opacity: 0; }
+.df-file:focus-visible .df-thumb { outline: 3px solid #a69bff; outline-offset: 4px; }
+
+/* ── drop zone ───────────────────────────────────────── */
+.df-zone { position: absolute; left: 170px; top: 80px; width: 520px; height: 680px; border-radius: 24px; background: rgba(255, 255, 255, .02); transition: background .25s, box-shadow .25s; }
+.df-dash { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.df-dash rect { fill: none; stroke: rgba(255, 255, 255, .18); stroke-width: 2; stroke-dasharray: 12 10; }
+.df-zone.is-hot { background: rgba(124, 108, 255, .07); box-shadow: 0 0 0 6px rgba(124, 108, 255, .1), 0 0 80px -10px rgba(124, 108, 255, .45); }
+.df-zone.is-hot .df-dash rect { stroke: var(--pulse); animation: df-march .6s linear infinite; }
+@keyframes df-march { to { stroke-dashoffset: -22; } }
+.df-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; transition: opacity .3s; }
+.df-zone.has-file .df-empty { opacity: 0; }
+.df-icon { width: 96px; height: 96px; border-radius: 24px; display: grid; place-items: center; background: rgba(124, 108, 255, .12); border: 1px solid rgba(124, 108, 255, .35); }
+.df-icon svg { width: 44px; fill: none; stroke: #a69bff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.df-t1 { margin-top: 30px; font-weight: 600; font-size: 38px; letter-spacing: -.02em; }
+.df-t2 { margin-top: 12px; font-size: 19px; color: var(--muted); }
+.df-t3 { margin-top: 26px; font: 500 13px var(--mono); letter-spacing: .16em; color: var(--dim); }
+
+/* ── the page of the brief ───────────────────────────── */
+.df-page {
+  position: absolute; left: 36px; top: 30px; width: 448px; height: 620px; padding: 30px 32px; overflow: hidden; opacity: 0;
+  border-radius: 14px; background: var(--paper); color: #14161e; transform-origin: 0 0;
+  box-shadow: 0 40px 80px -30px rgba(0, 0, 0, .9);
+}
+.df-row { opacity: 0; }
+.df-meta { display: flex; justify-content: space-between; font: 500 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: #7a7e90; }
+.df-page h2 { margin-top: 16px; font-size: 32px; line-height: 1.05; letter-spacing: -.025em; color: #0b0c12; }
+.df-by { margin-top: 8px; color: #5a5e70; }
+.df-page table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+.df-page td { height: 50px; border-top: 1px solid #dadce4; }
+.df-page tr:last-child td { border-bottom: 1px solid #dadce4; }
+.df-page td:first-child { width: 118px; font: 500 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: #7a7e90; }
+.df-page td + td { font-weight: 600; font-size: 21px; }
+.df-note { margin-top: 20px; font-weight: 500; font-size: 17px; color: #3a3d4c; }
+.df-lines i { display: block; height: 8px; margin-top: 12px; border-radius: 4px; background: #dcdee6; }
+.df-lines i + i { width: 80%; }
+.df-sig { position: absolute; left: 32px; bottom: 26px; display: flex; align-items: flex-end; gap: 16px; }
+.df-sig svg { width: 150px; fill: none; stroke: #2b2f55; stroke-width: 2.4; stroke-linecap: round; }
+.df-sig small { padding-bottom: 6px; font: 500 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #7a7e90; }
+
+/* recognised values: HUD brackets drawn with four corner gradients */
+.df-val { position: relative; padding: 2px 4px; margin-left: -4px; border-radius: 5px; transition: background .25s, color .25s; --c: #16b8a8; }
+.df-val::after {
+  content: ""; position: absolute; inset: -7px -9px; opacity: 0; scale: 1.18; transition: opacity .18s, scale .3s;
+  background:
+    linear-gradient(var(--c) 0 0) left top / 14px 2.5px, linear-gradient(var(--c) 0 0) left top / 2.5px 14px,
+    linear-gradient(var(--c) 0 0) right top / 14px 2.5px, linear-gradient(var(--c) 0 0) right top / 2.5px 14px,
+    linear-gradient(var(--c) 0 0) left bottom / 14px 2.5px, linear-gradient(var(--c) 0 0) left bottom / 2.5px 14px,
+    linear-gradient(var(--c) 0 0) right bottom / 14px 2.5px, linear-gradient(var(--c) 0 0) right bottom / 2.5px 14px;
+  background-repeat: no-repeat;
+}
+.df-val.is-hit { background: rgba(63, 224, 208, .18); }
+.df-val.is-hit::after { opacity: 1; scale: 1; }
+.df-val.is-warn { --c: #f0602a; background: rgba(255, 122, 69, .16); }
+.df-val.is-lifted { color: rgba(20, 22, 30, .35); }
+
+.df-scan { position: absolute; left: 0; right: 0; top: 0; height: 120px; opacity: 0; pointer-events: none; background: linear-gradient(rgba(63, 224, 208, 0), rgba(63, 224, 208, .1) 70%, rgba(63, 224, 208, .3)); }
+.df-scan::after { content: ""; position: absolute; left: -10px; right: -10px; bottom: -2px; height: 4px; background: var(--ok); box-shadow: 0 0 18px 4px rgba(63, 224, 208, .8), 0 0 60px 10px rgba(63, 224, 208, .35); }
+.df-stamp {
+  position: absolute; left: 66px; top: 462px; width: 316px; height: 108px; display: flex; align-items: center; justify-content: center; gap: 12px;
+  border: 5px solid #12a898; border-radius: 14px; color: #12a898; background: rgba(63, 224, 208, .1); mix-blend-mode: multiply;
+  font-weight: 800; font-size: 46px; letter-spacing: .1em; opacity: 0; transform: rotate(-11deg) scale(2.4); pointer-events: none;
+}
+.df-stamp svg { width: 34px; fill: none; stroke: currentColor; stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── form ────────────────────────────────────────────── */
+.df-form { position: absolute; left: 724px; top: 80px; width: 516px; height: 680px; padding: 32px 34px; border-radius: 24px; background: linear-gradient(#11131a, #0d0e14); border: 1px solid rgba(255, 255, 255, .08); }
+.df-form header { position: relative; margin-bottom: 6px; }
+.df-form h1 { font-weight: 600; font-size: 36px; letter-spacing: -.02em; }
+.df-status { margin-top: 8px; font: 500 13px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+.df-status.is-ai { color: var(--ok); }
+.df-clear { position: absolute; right: 0; top: 0; height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--line); background: none; color: var(--muted); cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .3s; }
+.df-clear.is-on { opacity: 1; pointer-events: auto; }
+.df-field { position: relative; display: block; margin-top: 20px; }
+.df-field > span, .df-field > label { display: block; margin-bottom: 9px; font: 500 13px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+.df-field input {
+  width: 100%; height: 62px; padding: 0 60px 0 20px; border-radius: 10px; outline: none;
+  background: rgba(255, 255, 255, .035); border: 1px solid var(--line); font-weight: 500; font-size: 23px;
+  transition: border-color .3s, box-shadow .3s, background .3s;
+}
+.df-field input::placeholder { color: #3e4150; }
+.df-field input:focus { border-color: var(--pulse); box-shadow: 0 0 0 4px rgba(124, 108, 255, .18); }
+.df-field.is-flash input { border-color: var(--pulse); box-shadow: 0 0 0 4px rgba(124, 108, 255, .22); }
+.df-field.is-good input { border-color: rgba(63, 224, 208, .5); background: rgba(63, 224, 208, .04); }
+.df-field.is-good::after {
+  content: "✓"; position: absolute; right: 14px; bottom: 13px; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(63, 224, 208, .14); border: 1.5px solid var(--ok); color: var(--ok); font-weight: 700;
+}
+.df-field.is-warn input { border-color: var(--warn); box-shadow: 0 0 0 4px rgba(255, 122, 69, .14); color: var(--warn); padding-right: 260px; }
+.df-field.is-warn > label { color: var(--warn); }
+.df-check {
+  position: absolute; right: 12px; bottom: 11px; height: 40px; padding: 0 14px; border-radius: 9px; cursor: pointer; display: none;
+  background: rgba(255, 122, 69, .14); border: 1px solid rgba(255, 122, 69, .55); color: var(--warn); font-weight: 600; font-size: 17px;
+}
+.df-field.is-warn .df-check { display: block; }
+.df-menu { position: absolute; left: 0; right: 0; top: 100%; z-index: 10; margin-top: 8px; padding: 8px; border-radius: 14px; background: #171922; border: 1px solid var(--line); box-shadow: 0 30px 60px -10px rgba(0, 0, 0, .9); display: none; }
+.df-field.is-open .df-menu { display: block; }
+.df-menu button { width: 100%; height: 62px; padding: 0 16px; border: 0; border-radius: 10px; background: none; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.df-menu button:hover, .df-menu button:focus-visible { background: rgba(124, 108, 255, .16); outline: none; }
+.df-menu b { font-size: 23px; }
+.df-menu span { font: 500 13px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+
+/* flying chips and the slam flash */
+.df-chip {
+  position: absolute; left: 0; top: 0; z-index: 20; height: 46px; padding: 0 18px; border-radius: 12px; display: flex; align-items: center; white-space: nowrap; pointer-events: none;
+  background: var(--pulse-btn); color: #fff; font-weight: 600; font-size: 21px; box-shadow: 0 14px 34px -8px rgba(124, 108, 255, .9);
+}
+.df-chip.is-warn { background: #e8693a; box-shadow: 0 14px 34px -8px rgba(255, 122, 69, .9); }
+.df-flash { position: fixed; inset: 0; pointer-events: none; opacity: 0; mix-blend-mode: screen; background: radial-gradient(75% 95% at var(--x, 30%) var(--y, 60%), rgba(63, 224, 208, .75), rgba(63, 224, 208, .34) 40%, rgba(124, 108, 255, .12) 75%, transparent); }
+
+@media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .15s !important; } }

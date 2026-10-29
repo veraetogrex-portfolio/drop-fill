@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>T09 Drop &amp; Fill — drop a brief, the form fills itself</title>
+<link rel="stylesheet" href="_shared/nocturne.css">
+<style>
+  #stage{background:radial-gradient(ellipse 70% 60% at 50% 50%,#0C0E15 0%,var(--void) 75%)}
+
+  /* ---------- stepper ---------- */
+  .stepper{position:absolute;left:0;right:0;top:34px;height:60px;display:flex;justify-content:center;align-items:center;gap:0;z-index:2}
+  .step{display:flex;align-items:center;gap:14px;font:600 21px var(--f-text);color:var(--text-3);transition:color .35s}
+  .step .n{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--line-2);display:flex;align-items:center;justify-content:center;font:600 18px var(--f-display);color:var(--text-3);position:relative;transition:all .35s}
+  .step .n svg{position:absolute;opacity:0;transform:scale(.4);transition:all .35s var(--ease-back)}
+  .step .n svg path{stroke:#04231F;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .step.on{color:var(--text)}
+  .step.on .n{border-color:var(--pulse);background:rgba(124,108,255,.16);color:#fff;box-shadow:0 0 0 5px rgba(124,108,255,.12),0 0 24px rgba(124,108,255,.35)}
+  .step.done{color:var(--text-2)}
+  .step.done .n{border-color:var(--ion);background:var(--ion);color:transparent;box-shadow:0 0 20px rgba(63,224,208,.35)}
+  .step.done .n svg{opacity:1;transform:none}
+  .conn{width:110px;height:2px;margin:0 22px;background:var(--line-2);position:relative;overflow:hidden;border-radius:1px}
+  .conn i{position:absolute;inset:0;background:linear-gradient(90deg,var(--ion),var(--pulse));transform:scaleX(0);transform-origin:left;transition:transform .5s var(--ease-out)}
+  .conn.fill i{transform:scaleX(1)}
+
+  /* ---------- thumbnail (the file) ---------- */
+  .thumb{position:absolute;left:58px;top:610px;width:144px;z-index:20;cursor:grab;touch-action:none;outline:none;will-change:transform;text-align:center}
+  .thumb .pg{position:relative;width:132px;height:170px;margin:0 auto;border-radius:10px;background:#F4F5F8;
+    box-shadow:0 18px 40px -12px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.15);transition:box-shadow .2s,transform .25s var(--ease-out);
+    clip-path:polygon(0 0,calc(100% - 30px) 0,100% 30px,100% 100%,0 100%)}
+  .thumb .pg::after{content:"";position:absolute;right:0;top:0;width:30px;height:30px;background:linear-gradient(225deg,transparent 50%,#C9CCD8 50%);border-bottom-left-radius:6px}
+  .thumb .pg .ln{position:absolute;left:16px;height:6px;border-radius:3px;background:#C9CCD8}
+  .thumb .badge{position:absolute;left:14px;bottom:16px;height:30px;padding:0 10px;border-radius:7px;background:var(--pulse-btn);color:#fff;font:700 15px var(--f-display);letter-spacing:.06em;display:flex;align-items:center}
+  .thumb .nm{margin-top:12px;font:500 15px var(--f-mono);color:var(--text-2);letter-spacing:.02em;white-space:nowrap}
+  .thumb.drag .pg{transform:rotate(-5deg) scale(1.06);box-shadow:0 30px 60px -12px rgba(0,0,0,.9),0 0 0 2px var(--pulse),0 0 40px rgba(124,108,255,.45)}
+  .thumb.drag{cursor:grabbing}
+  .thumb.drag .nm{opacity:0}
+  .thumb:focus-visible .pg{box-shadow:0 0 0 3px var(--void),0 0 0 6px var(--pulse-soft)}
+
+  /* ---------- drop zone ---------- */
+  .zone{position:absolute;left:250px;top:128px;width:520px;height:700px;border-radius:24px;z-index:1;
+    background:rgba(255,255,255,.02);transition:background .25s,box-shadow .25s}
+  .zone .dash{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .zone .dash rect{fill:none;stroke:rgba(255,255,255,.18);stroke-width:2;stroke-dasharray:12 10;transition:stroke .25s}
+  .zone.hot{background:rgba(124,108,255,.07);box-shadow:0 0 0 6px rgba(124,108,255,.10),0 0 80px -10px rgba(124,108,255,.45)}
+  .zone.hot .dash rect{stroke:var(--pulse);stroke-dasharray:12 10;animation:march .6s linear infinite}
+  @keyframes march{to{stroke-dashoffset:-22}}
+  .zone .empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .3s,transform .3s var(--ease-out)}
+  .zone .ico{width:96px;height:96px;border-radius:24px;background:rgba(124,108,255,.12);border:1px solid rgba(124,108,255,.35);display:flex;align-items:center;justify-content:center;transition:transform .3s var(--ease-back)}
+  .zone.hot .ico{transform:translateY(-8px) scale(1.06)}
+  .zone .t1{margin-top:30px;font:600 38px var(--f-text);letter-spacing:-.02em}
+  .zone .t2{margin-top:12px;font:400 19px var(--f-text);color:var(--text-2)}
+  .zone .t3{margin-top:26px;font:500 13px var(--f-mono);letter-spacing:.16em;color:var(--text-3);text-transform:uppercase}
+  .zone.hot .t1::after{content:""}
+  .zone.has .empty{opacity:0;transform:scale(.96)}
+
+  /* ---------- the document page ---------- */
+  .page{position:absolute;left:36px;top:40px;width:448px;height:620px;border-radius:14px;background:#F4F5F8;color:#14161E;overflow:hidden;
+    padding:30px 32px 0;opacity:0;transform-origin:0 0;box-shadow:0 40px 80px -30px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.2);will-change:transform}
+  .page .top{display:flex;justify-content:space-between;font:500 12px var(--f-mono);letter-spacing:.14em;color:#7A7E90;text-transform:uppercase}
+  .page h3{margin:16px 0 0;font:700 32px/1.05 var(--f-text);letter-spacing:-.025em;color:#0B0C12}
+  .page .by{margin-top:8px;font:400 16px var(--f-text);color:#5A5E70}
+  .page table{width:100%;margin-top:20px;border-collapse:collapse}
+  .page td{height:50px;border-top:1px solid #DADCE4;vertical-align:middle}
+  .page tr:last-child td{border-bottom:1px solid #DADCE4}
+  .page td.k{width:118px;font:500 12px var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:#7A7E90}
+  .page td.v{font:600 21px var(--f-text);color:#14161E}
+  .page .val{position:relative;display:inline-block;padding:2px 4px;margin-left:-4px;border-radius:5px;transition:background .25s}
+  .page .note{margin-top:20px;font:500 17px var(--f-text);color:#3A3D4C}
+  .page .note .val{font-weight:700}
+  .page .bars{margin-top:14px}
+  .page .bars i{display:block;height:8px;border-radius:4px;background:#DCDEE6;margin-bottom:10px}
+  .page .sig{position:absolute;left:32px;bottom:26px;display:flex;align-items:flex-end;gap:16px}
+  .page .sig small{font:500 12px var(--f-mono);letter-spacing:.1em;color:#7A7E90;text-transform:uppercase;padding-bottom:6px}
+  .page .reveal{opacity:0;transform:translateY(6px)}
+  /* HUD brackets around recognised values */
+  .val .br{position:absolute;inset:-7px -9px;pointer-events:none;opacity:0;transform:scale(1.18);transition:opacity .18s,transform .3s var(--ease-out);--c:#16B8A8;
+    background:
+     linear-gradient(var(--c) 0 0) left top/14px 2.5px no-repeat,linear-gradient(var(--c) 0 0) left top/2.5px 14px no-repeat,
+     linear-gradient(var(--c) 0 0) right top/14px 2.5px no-repeat,linear-gradient(var(--c) 0 0) right top/2.5px 14px no-repeat,
+     linear-gradient(var(--c) 0 0) left bottom/14px 2.5px no-repeat,linear-gradient(var(--c) 0 0) left bottom/2.5px 14px no-repeat,
+     linear-gradient(var(--c) 0 0) right bottom/14px 2.5px no-repeat,linear-gradient(var(--c) 0 0) right bottom/2.5px 14px no-repeat}
+  .val.hit{background:rgba(63,224,208,.18)}
+  .val.hit .br{opacity:1;transform:none}
+  .val.warn .br{--c:#F0602A}
+  .val.warn.hit{background:rgba(255,122,69,.16)}
+  .val.lift{color:rgba(20,22,30,.35)}
+  .scan{position:absolute;left:0;right:0;top:0;height:120px;pointer-events:none;opacity:0;
+    background:linear-gradient(180deg,rgba(63,224,208,0) 0%,rgba(63,224,208,.10) 70%,rgba(63,224,208,.30) 100%)}
+  .scan::after{content:"";position:absolute;left:-10px;right:-10px;bottom:-2px;height:4px;background:#3FE0D0;box-shadow:0 0 18px 4px rgba(63,224,208,.8),0 0 60px 10px rgba(63,224,208,.35)}
+  .stamp{position:absolute;left:70px;top:462px;width:316px;height:108px;border:5px solid #12A898;border-radius:14px;color:#12A898;
+    display:flex;align-items:center;justify-content:center;gap:12px;font:700 50px var(--f-display);letter-spacing:.1em;opacity:0;pointer-events:none;
+    background:rgba(63,224,208,.10);mix-blend-mode:multiply;transform:rotate(-11deg) scale(2.4)}
+  .stamp::before{content:"";position:absolute;inset:5px;border:1.5px solid rgba(18,168,152,.6);border-radius:8px}
+
+  /* ---------- form ---------- */
+  .form{position:absolute;left:812px;top:128px;width:580px;height:700px;z-index:1;border-radius:24px;padding:34px 36px 0;
+    background:linear-gradient(180deg,#11131A 0%,#0D0E14 100%);border:1px solid var(--line);box-shadow:0 60px 120px -40px rgba(0,0,0,.8)}
+  .form .hud-corners{inset:-12px}
+  .fhead{display:flex;justify-content:space-between;align-items:flex-start}
+  .fhead h2{margin:0;font:600 36px var(--f-text);letter-spacing:-.02em}
+  .fhead .k{margin-top:8px;font:500 13px var(--f-mono);letter-spacing:.16em;color:var(--text-3);text-transform:uppercase;transition:color .3s}
+  .fhead .k.ai{color:var(--ion)}
+  .clear{height:40px;padding:0 16px;border-radius:10px;border:1px solid var(--line-2);font:500 15px var(--f-text);color:var(--text-2);opacity:0;pointer-events:none;transition:opacity .3s}
+  .clear.show{opacity:1;pointer-events:auto}
+  .clear:hover{color:var(--text);border-color:rgba(255,255,255,.3)}
+  .fl{margin-top:22px;position:relative}
+  .fl:first-of-type{margin-top:28px}
+  .fl label{display:flex;justify-content:space-between;font:500 13px var(--f-mono);letter-spacing:.16em;color:var(--text-3);text-transform:uppercase;margin-bottom:9px}
+  .fl .wrap{position:relative}
+  .fl .field{width:100%;height:62px;font:500 23px var(--f-text);padding:0 60px 0 20px;transition:border-color .3s,box-shadow .3s,background .3s}
+  .fl .field::placeholder{color:#3E4150}
+  .fl .ok{position:absolute;right:14px;top:13px;width:36px;height:36px;border-radius:50%;background:rgba(63,224,208,.14);border:1.5px solid var(--ion);display:flex;align-items:center;justify-content:center;opacity:0;transform:scale(.3);transition:opacity .2s,transform .35s var(--ease-back)}
+  .fl .ok path{stroke:var(--ion);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .fl.good .field{border-color:rgba(63,224,208,.5);background:rgba(63,224,208,.04)}
+  .fl.good .ok{opacity:1;transform:none}
+  .fl.flash .field{box-shadow:0 0 0 4px rgba(124,108,255,.22);border-color:var(--pulse)}
+  .fl .check{position:absolute;right:12px;top:11px;height:40px;padding:0 12px 0 14px;border-radius:9px;display:flex;align-items:center;gap:8px;cursor:pointer;
+    background:rgba(255,122,69,.14);border:1px solid rgba(255,122,69,.55);color:var(--flare);font:600 18px var(--f-text);opacity:0;transform:translateX(10px);pointer-events:none;transition:opacity .25s,transform .35s var(--ease-out)}
+  .fl.warn .field{border-color:var(--flare);box-shadow:0 0 0 4px rgba(255,122,69,.14);padding-right:270px;cursor:pointer;color:var(--flare)}
+  .fl.warn label{color:var(--flare)}
+  .fl.warn .check{opacity:1;transform:none;pointer-events:auto}
+  .fl.warn .check svg{transition:transform .25s}
+  .fl.open .check svg{transform:rotate(180deg)}
+  .menu{position:absolute;left:0;right:0;top:100%;margin-top:8px;z-index:10;border-radius:14px;background:#171922;border:1px solid var(--line-2);box-shadow:0 30px 60px -10px rgba(0,0,0,.9);padding:8px;
+    opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .2s,transform .25s var(--ease-out)}
+  .fl.open .menu{opacity:1;transform:none;pointer-events:auto}
+  .menu button{width:100%;height:62px;border-radius:10px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;text-align:left}
+  .menu button b{font:600 23px var(--f-text)}
+  .menu button span{font:500 13px var(--f-mono);letter-spacing:.1em;color:var(--text-3);text-transform:uppercase}
+  .menu button:hover,.menu button.li-hover,.menu button:focus-visible{background:rgba(124,108,255,.16);outline:none}
+
+  /* flying chips */
+  .chip{position:absolute;left:0;top:0;z-index:40;height:46px;padding:0 18px;border-radius:12px;display:flex;align-items:center;white-space:nowrap;pointer-events:none;
+    font:600 21px var(--f-text);color:#fff;background:var(--pulse-btn);box-shadow:0 0 0 1px rgba(255,255,255,.2) inset,0 14px 34px -8px rgba(124,108,255,.9);will-change:transform,opacity}
+  .chip.w{background:#E8693A;box-shadow:0 0 0 1px rgba(255,255,255,.2) inset,0 14px 34px -8px rgba(255,122,69,.9)}
+  /* payoff: Ion flash when the stamp lands */
+  .flash{position:absolute;inset:0;z-index:30;pointer-events:none;opacity:0;mix-blend-mode:screen;
+    background:radial-gradient(ellipse 75% 95% at 514px 684px,rgba(63,224,208,.75),rgba(63,224,208,.34) 40%,rgba(124,108,255,.12) 75%,transparent 100%)}
+  .trailc{position:absolute;left:0;top:0;width:10px;height:10px;margin:-5px;border-radius:50%;z-index:39;pointer-events:none;background:var(--pulse-soft);opacity:0}
+</style>
+</head>
+<body>
+<div id="stage" class="grid" data-title="T09 Drop & Fill" data-url="veraetogrex-portfolio.github.io/projects/new">
+  <div class="stepper">
+    <div class="step on" id="s1"><span class="n">1<svg width="20" height="20" viewBox="0 0 20 20"><path d="M4.5 10.5l3.5 3.3L15.5 6"/></svg></span>Import</div>
+    <div class="conn" id="c1"><i></i></div>
+    <div class="step" id="s2"><span class="n">2<svg width="20" height="20" viewBox="0 0 20 20"><path d="M4.5 10.5l3.5 3.3L15.5 6"/></svg></span>Review</div>
+    <div class="conn"><i></i></div>
+    <div class="step" id="s3"><span class="n">3</span>Create</div>
+  </div>
+
+  <div class="zone" id="zone">
+    <svg class="dash" viewBox="0 0 520 700" preserveAspectRatio="none"><rect x="1" y="1" width="518" height="698" rx="23"/></svg>
+    <div class="empty">
+      <div class="ico"><svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="#A69BFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 28V8M14 16l8-8 8 8"/><path d="M8 26v8a4 4 0 0 0 4 4h20a4 4 0 0 0 4-4v-8"/></svg></div>
+      <div class="t1" id="zt1">Drop a brief</div>
+      <div class="t2">We'll read it and fill the project.</div>
+      <div class="t3">PDF · DOCX · up to 20 MB</div>
+    </div>
+    <div class="page" id="page">
+      <div class="top reveal"><span>Project brief · NWD-07</span><span>p.1</span></div>
+      <h3 class="reveal">Dock redesign</h3>
+      <div class="by reveal">Prepared for Veraetogrex · Oct 2026</div>
+      <table class="reveal">
+        <tr><td class="k">Client</td><td class="v"><span class="val" data-f="client">Northwind Labs<i class="br"></i></span></td></tr>
+        <tr><td class="k">Project</td><td class="v"><span class="val" data-f="name">NWD · Dock redesign<i class="br"></i></span></td></tr>
+        <tr><td class="k">Budget</td><td class="v"><span class="val" data-f="budget">$48,000<i class="br"></i></span></td></tr>
+        <tr><td class="k">Deadline</td><td class="v"><span class="val" data-f="deadline">Dec 12, 2026<i class="br"></i></span></td></tr>
+        <tr><td class="k">Owner</td><td class="v"><span class="val" data-f="owner">Sana Okafor<i class="br"></i></span></td></tr>
+      </table>
+      <div class="note reveal">Note: total incl. VAT <span class="val" id="vat">$52,500<i class="br"></i></span></div>
+      <div class="bars reveal"><i style="width:94%"></i><i style="width:78%"></i></div>
+      <div class="sig reveal"><svg width="150" height="52" viewBox="0 0 150 52" fill="none" stroke="#2B2F55" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 36c10-22 22-30 26-22s-14 24-8 26 18-26 26-24-6 22 0 22 12-14 18-14 2 12 8 12 10-18 16-18-2 16 6 16 14-8 20-12"/><path d="M14 46h120" stroke="#9CA0B2" stroke-width="1.2"/></svg><small>Sana Okafor · Producer</small></div>
+      <div class="scan" id="scan"></div>
+      <div class="stamp" id="stamp"><svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="#12A898" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18l7 7L28 9"/></svg>IMPORTED</div>
+    </div>
+  </div>
+
+  <div class="form" id="form">
+    <div class="hud-corners"></div>
+    <div class="fhead"><div><h2>New project</h2><div class="k" id="fk">Draft · 0 of 5 filled</div></div><button class="clear" id="clear" type="button">Clear</button></div>
+    <div class="fl" data-f="client"><label for="i-client">Client</label><div class="wrap"><input class="field" id="i-client" placeholder="Company" autocomplete="off" spellcheck="false"><span class="ok"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M4 9.5l3.2 3L14 5.5"/></svg></span></div></div>
+    <div class="fl" data-f="name"><label for="i-name">Project name</label><div class="wrap"><input class="field" id="i-name" placeholder="Name the project" autocomplete="off" spellcheck="false"><span class="ok"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M4 9.5l3.2 3L14 5.5"/></svg></span></div></div>
+    <div class="fl" data-f="budget" id="flBudget"><label for="i-budget">Budget</label><div class="wrap"><input class="field" id="i-budget" placeholder="$0" autocomplete="off" spellcheck="false"><span class="ok"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M4 9.5l3.2 3L14 5.5"/></svg></span>
+      <button class="check" id="check" type="button" aria-haspopup="listbox">Check: 2 values found<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg></button></div>
+      <div class="menu" id="menu" role="listbox">
+        <button type="button" data-v="$48,000" role="option"><b>$48,000</b><span>Budget table</span></button>
+        <button type="button" data-v="$52,500" role="option"><b>$52,500</b><span>Note · incl. VAT</span></button>
+      </div></div>
+    <div class="fl" data-f="deadline"><label for="i-deadline">Deadline</label><div class="wrap"><input class="field" id="i-deadline" placeholder="Pick a date" autocomplete="off" spellcheck="false"><span class="ok"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M4 9.5l3.2 3L14 5.5"/></svg></span></div></div>
+    <div class="fl" data-f="owner"><label for="i-owner">Owner</label><div class="wrap"><input class="field" id="i-owner" placeholder="Assign someone" autocomplete="off" spellcheck="false"><span class="ok"><svg width="18" height="18" viewBox="0 0 18 18"><path d="M4 9.5l3.2 3L14 5.5"/></svg></span></div></div>
+  </div>
+
+  <div class="thumb" id="thumb" tabindex="0" role="button" aria-label="nwd-brief.pdf — drag into the drop zone or press Enter to import">
+    <div class="pg"><i class="ln" style="top:22px;width:58px;background:#9CA0B2"></i><i class="ln" style="top:40px;width:96px"></i><i class="ln" style="top:56px;width:84px"></i><i class="ln" style="top:72px;width:92px"></i><i class="ln" style="top:88px;width:64px"></i><span class="badge">PDF</span></div>
+    <div class="nm">nwd-brief.pdf</div>
+  </div>
+  <div id="chips"></div>
+  <div class="flash" id="flash"></div>
+
+  <div class="status-line"><span>Veraetogrex · T09</span><span>Import a brief</span></div>
+</div>
+
+<script>window.AUTOPLAY = true;</script>
+<script src="_shared/stage.js"></script>
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const thumb = $('#thumb'), zone = $('#zone'), page = $('#page'), scan = $('#scan'), stamp = $('#stamp'), chips = $('#chips');
+const form = $('#form'), fk = $('#fk'), clearBtn = $('#clear'), flBudget = $('#flBudget'), menu = $('#menu');
+const FIELDS = ['client', 'name', 'budget', 'deadline', 'owner'];
+const fl = f => document.querySelector(`.fl[data-f="${f}"]`);
+const inp = f => document.getElementById('i-' + f);
+const VAL = { client: 'Northwind Labs', name: 'NWD · Dock redesign', budget: '$48,000', deadline: 'Dec 12, 2026', owner: 'Sana Okafor' };
+
+let phase = 'idle';      // idle | drag | import | done
+let flow = null;
+let drag = null, tx = 0, ty = 0, tvx = 0, tvy = 0, homing = false;
+
+// ---------- thumbnail drag (real pointer events; the demo drives the same handlers) ----------
+function placeThumb() { thumb.style.transform = `translate(${tx.toFixed(1)}px,${ty.toFixed(1)}px)`; }
+function overZone(x, y) { const r = Stage.rect(zone); return x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h; }
+thumb.addEventListener('pointerdown', e => {
+  if (phase !== 'idle') return;
+  e.preventDefault();
+  const [x, y] = Stage.toStage(e.clientX, e.clientY);
+  drag = { x0: x - tx, y0: y - ty };
+  homing = false; phase = 'drag';
+  thumb.classList.add('drag');
+});
+addEventListener('pointermove', e => {
+  if (!drag) return;
+  const [x, y] = Stage.toStage(e.clientX, e.clientY);
+  tx = x - drag.x0; ty = y - drag.y0; placeThumb();
+  zone.classList.toggle('hot', overZone(x, y));
+  $('#zt1').textContent = overZone(x, y) ? 'Release to import' : 'Drop a brief';
+});
+addEventListener('pointerup', e => {
+  if (!drag) return;
+  const [x, y] = Stage.toStage(e.clientX, e.clientY);
+  drag = null; thumb.classList.remove('drag');
+  if (overZone(x, y)) { flow = importBrief(Stage.ctx()); }
+  else { phase = 'idle'; zone.classList.remove('hot'); $('#zt1').textContent = 'Drop a brief'; homing = true; }
+});
+// spring the file home after a miss
+(function home(now) {
+  if (homing) {
+    const dt = 1 / 60;
+    tvx += (-220 * tx - 20 * tvx) * dt; tvy += (-220 * ty - 20 * tvy) * dt;
+    tx += tvx * dt; ty += tvy * dt; placeThumb();
+    if (Math.abs(tx) + Math.abs(ty) + Math.abs(tvx) + Math.abs(tvy) < .3) { tx = ty = tvx = tvy = 0; homing = false; placeThumb(); }
+  }
+  requestAnimationFrame(home);
+})();
+thumb.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && phase === 'idle') { e.preventDefault(); flow = importBrief(Stage.ctx(), true); }
+});
+
+// ---------- the import ----------
+async function importBrief(s, fromKeyboard) {
+  phase = 'import';
+  zone.classList.remove('hot'); zone.classList.add('has');
+  $('#zt1').textContent = 'Drop a brief';
+  // 1) the file lands and unfolds into a page (FLIP from the thumbnail rect)
+  const tr = Stage.rect(thumb.querySelector('.pg')), zr = Stage.rect(zone);
+  const pgX = zr.x + 36, pgY = zr.y + 40, pgW = 448, pgH = 620;
+  const sx0 = tr.w / pgW, sy0 = tr.h / pgH, dx0 = tr.x - pgX, dy0 = tr.y - pgY;
+  const reveals = $$('.page .reveal');
+  // set the starting (thumbnail-sized) state before the page becomes visible, so no frame shows it full-size
+  page.style.transform = `translate(${dx0}px,${dy0}px) scale(${sx0},${sy0}) rotate(-5deg)`;
+  reveals.forEach(r => { r.style.opacity = 0; r.style.transform = 'translateY(6px)'; });
+  thumb.style.opacity = 0;
+  page.style.opacity = 1;
+  await s.tween(560, t => {
+    const sx = s.lerp(sx0, 1, t), sy = s.lerp(sy0, 1, t);
+    page.style.transform = `translate(${s.lerp(dx0, 0, t)}px,${s.lerp(dy0, 0, t)}px) scale(${sx},${sy}) rotate(${(-5 * (1 - t)).toFixed(2)}deg)`;
+    reveals.forEach((r, i) => { const u = s.clamp((t - .35 - i * .07) / .35); r.style.opacity = u; r.style.transform = `translateY(${6 * (1 - u)}px)`; });
+  }, s.ease.outBack);
+  page.style.transform = '';
+  reveals.forEach(r => { r.style.opacity = 1; r.style.transform = 'none'; });
+
+  // 2) scanner beam sweeps, recognised values get HUD brackets
+  const vals = $$('.page .val');
+  const pr = Stage.rect(page);
+  const marks = vals.map(v => { const r = Stage.rect(v); return { v, y: r.y + r.h / 2 - pr.y }; });
+  scan.style.opacity = 1;
+  fk.textContent = 'Reading brief…'; fk.classList.add('ai');
+  await s.tween(800, t => {
+    const y = -120 + (pgH + 40) * t;
+    scan.style.transform = `translateY(${y}px)`;
+    for (const m of marks) if (!m.v.classList.contains('hit') && y + 118 > m.y) {
+      if (m.v.dataset.f === 'budget' || m.v.id === 'vat') m.v.classList.add('warn');
+      m.v.classList.add('hit');
+    }
+  }, s.ease.linear);
+  s.tween(200, t => scan.style.opacity = 1 - t).catch(() => {});
+
+  // 3) values tear off as chips and fly on arcs into the fields (120 ms apart)
+  fk.textContent = 'Filling 5 fields…';
+  const flights = FIELDS.map((f, i) => fly(s, f, i * 120));
+  await Promise.all(flights);
+  fk.textContent = 'Draft · 5 of 5 filled'; fk.classList.remove('ai');
+
+  // 4) stamp + stepper → Review
+  await s.wait(fromKeyboard ? 100 : 160);
+  stamp.style.opacity = 1;
+  await s.tween(240, t => { stamp.style.transform = `rotate(-11deg) scale(${s.lerp(2.4, 1, t)})`; stamp.style.opacity = Math.min(1, t * 2.5); }, s.ease.in);
+  slam(s);
+  $('#s1').classList.remove('on'); $('#s1').classList.add('done');
+  $('#c1').classList.add('fill');
+  await s.wait(180);
+  $('#s2').classList.add('on');
+  clearBtn.classList.add('show');
+  phase = 'done';
+}
+
+// payoff: the stamp lands — the whole screen shakes and an Ion flash washes over it
+const SHAKE = () => $$('.stepper, .zone, .form');
+function slam(s) {
+  s.tween(700, (_, p) => { $('#flash').style.opacity = (p < .1 ? p / .1 : (1 - p) / .9).toFixed(3); }, s.ease.linear).catch(() => {});
+  s.tween(420, (_, p) => {
+    const amp = (1 - p) * 14, tr = `${(Math.sin(p * 46) * amp * .5).toFixed(2)}px ${(Math.sin(p * 38) * amp).toFixed(2)}px`;
+    SHAKE().forEach(e => e.style.translate = tr);
+  }, s.ease.linear).then(() => SHAKE().forEach(e => e.style.translate = '')).catch(() => {});
+}
+
+async function fly(s, f, delay) {
+  await s.wait(delay);
+  const src = document.querySelector(`.page .val[data-f="${f}"]`);
+  const a = Stage.rect(src), b = Stage.rect(inp(f));
+  const warn = f === 'budget';
+  const c = document.createElement('div'); c.className = 'chip' + (warn ? ' w' : ''); c.textContent = VAL[f];
+  chips.appendChild(c);
+  const cw = c.offsetWidth, ch = c.offsetHeight;
+  const x0 = a.x - 14, y0 = a.cy - ch / 2, x1 = b.x + 8, y1 = b.cy - ch / 2;
+  const mx = (x0 + x1) / 2, my = Math.min(y0, y1) - 130 - (FIELDS.indexOf(f) % 2) * 30;
+  src.classList.add('lift');
+  await s.tween(640, t => {
+    const u = 1 - t;
+    const x = u * u * x0 + 2 * u * t * mx + t * t * x1, y = u * u * y0 + 2 * u * t * my + t * t * y1;
+    const sc = 1 + .12 * Math.sin(Math.PI * t);
+    c.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${sc.toFixed(3)}) rotate(${(Math.sin(Math.PI * t) * -6).toFixed(2)}deg)`;
+    c.style.opacity = t > .82 ? (1 - (t - .82) / .18).toFixed(3) : 1;
+  }, s.ease.inOut);
+  c.remove();
+  const box = fl(f);
+  box.classList.add('flash');
+  const el = inp(f); el.value = '';
+  for (const chq of VAL[f]) { el.value += chq; await s.wait(22); }
+  box.classList.remove('flash');
+  if (warn) box.classList.add('warn'); else box.classList.add('good');
+}
+
+// ---------- budget conflict: pick one of two values ----------
+function openMenu(open) { flBudget.classList.toggle('open', open); }
+$('#check').addEventListener('click', e => { e.stopPropagation(); openMenu(!flBudget.classList.contains('open')); });
+inp('budget').addEventListener('click', () => { if (flBudget.classList.contains('warn')) openMenu(!flBudget.classList.contains('open')); });
+menu.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  inp('budget').value = b.dataset.v;
+  flBudget.classList.remove('warn', 'open'); flBudget.classList.add('good');
+  const vat = b.dataset.v === '$52,500';
+  $$('.page .val.warn').forEach(v => { v.classList.remove('warn'); });
+  fk.textContent = 'Draft · ready for review';
+});
+addEventListener('pointerdown', e => { if (!flBudget.contains(e.target)) openMenu(false); });
+clearBtn.addEventListener('click', () => Stage.reset());
+
+// ---------- reset & unwind ----------
+function reset() {
+  phase = 'idle'; flow = null; drag = null; homing = false;
+  tx = ty = tvx = tvy = 0; placeThumb();
+  thumb.classList.remove('drag'); thumb.style.opacity = '';
+  zone.classList.remove('hot', 'has'); $('#zt1').textContent = 'Drop a brief';
+  page.style.opacity = 0; page.style.transform = '';
+  $$('.page .reveal').forEach(r => { r.style.opacity = ''; r.style.transform = ''; });
+  $$('.page .val').forEach(v => v.classList.remove('hit', 'warn', 'lift'));
+  scan.style.opacity = 0; scan.style.transform = '';
+  stamp.style.opacity = 0; stamp.style.transform = 'rotate(-11deg) scale(2.4)';
+  chips.innerHTML = '';
+  $('#flash').style.opacity = 0; SHAKE().forEach(e => e.style.translate = '');
+  FIELDS.forEach(f => { inp(f).value = ''; inp(f).style.color = ''; fl(f).classList.remove('good', 'warn', 'flash', 'open'); });
+  fk.textContent = 'Draft · 0 of 5 filled'; fk.classList.remove('ai');
+  $('#s1').classList.add('on'); $('#s1').classList.remove('done'); $('#s2').classList.remove('on'); $('#c1').classList.remove('fill');
+  clearBtn.classList.remove('show');
+}
+// end of loop: the form clears and the page folds back into the file in its corner
+async function unwind(s) {
+  FIELDS.forEach(f => { inp(f).style.transition = 'color .3s'; inp(f).style.color = 'transparent'; fl(f).classList.remove('good', 'warn'); });
+  fk.textContent = 'Draft · 0 of 5 filled';
+  clearBtn.classList.remove('show');
+  $('#s2').classList.remove('on'); $('#s1').classList.remove('done'); $('#c1').classList.remove('fill');
+  s.later(() => $('#s1').classList.add('on'), 200);
+  stamp.style.transition = 'opacity .25s'; stamp.style.opacity = 0;
+  $$('.page .val').forEach(v => v.classList.remove('hit', 'warn', 'lift'));
+  await s.wait(300);
+  stamp.style.transition = '';
+  FIELDS.forEach(f => { inp(f).value = ''; inp(f).style.transition = ''; inp(f).style.color = ''; });
+  // fold page back to the thumbnail spot
+  thumb.style.transition = 'none';
+  const zr = Stage.rect(zone);
+  tx = 0; ty = 0; placeThumb();
+  const tr = Stage.rect(thumb.querySelector('.pg'));
+  const pgX = zr.x + 36, pgY = zr.y + 40;
+  const sx1 = tr.w / 448, sy1 = tr.h / 620, dx1 = tr.x - pgX, dy1 = tr.y - pgY;
+  zone.classList.remove('has');
+  await s.tween(520, t => {
+    page.style.transform = `translate(${s.lerp(0, dx1, t)}px,${s.lerp(0, dy1, t)}px) scale(${s.lerp(1, sx1, t)},${s.lerp(1, sy1, t)})`;
+    $$('.page .reveal').forEach(r => r.style.opacity = 1 - s.clamp(t * 2.2));
+    const f = s.clamp((t - .55) / .45);
+    page.style.opacity = 1 - f; thumb.style.opacity = f;
+  }, s.ease.inOut);
+  thumb.style.opacity = ''; page.style.opacity = 0;
+}
+
+Stage.init({
+  reset,
+  cursorStart: [330, 860],
+  async demo(s) {
+    // 0.0–1.0 grab the PDF in the corner and drag it into the zone
+    const r = Stage.rect(thumb.querySelector('.pg'));
+    await s.move([r.cx + 4, r.cy + 10], 300, { arc: .1 });
+    await s.drag([505, 610], 620, { pre: 60, post: 50, arc: .14 });
+    // 1.0–5.2 the brief reads itself into the form
+    s.move([700, 868], 700, { arc: -.15 }).catch(() => {});
+    await s.wait(10);
+    await flow;
+    await s.wait(950);
+    // 5.2–6.5 clear back to the first frame
+    s.move([330, 860], 900, { arc: .1 }).catch(() => {});
+    await unwind(s);
+    await s.wait(280);
+  },
+});
+</script>
+</body>
+</html>

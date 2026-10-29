@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Drop &amp; Fill — veraetogrex_portfolio</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Drop & Fill · zero dependencies · github.com/veraetogrex-portfolio -->
+  <main class="df" id="df">
+    <ol class="df-steps">
+      <li class="is-on"><i>1</i>Import</li>
+      <li><i>2</i>Review</li>
+      <li><i>3</i>Create</li>
+    </ol>
+
+    <section class="df-zone" aria-label="Drop a brief">
+      <svg class="df-dash" viewBox="0 0 520 680" preserveAspectRatio="none"><rect x="1" y="1" width="518" height="678" rx="23"/></svg>
+      <div class="df-empty">
+        <div class="df-icon"><svg viewBox="0 0 44 44"><path d="M22 28V8M14 16l8-8 8 8M8 26v8a4 4 0 0 0 4 4h20a4 4 0 0 0 4-4v-8"/></svg></div>
+        <p class="df-t1">Drop a brief</p>
+        <p class="df-t2">We'll read it and fill the project.</p>
+        <p class="df-t3">PDF · DOCX · up to 20 MB</p>
+      </div>
+
+      <article class="df-page" aria-hidden="true">
+        <div class="df-row df-meta"><span>Project brief · NWD-07</span><span>p.1</span></div>
+        <h2 class="df-row">Dock redesign</h2>
+        <p class="df-row df-by">Prepared for Veraetogrex · Oct 2026</p>
+        <table class="df-row">
+          <tr><td>Client</td><td><span class="df-val" data-f="client">Northwind Labs</span></td></tr>
+          <tr><td>Project</td><td><span class="df-val" data-f="name">NWD · Dock redesign</span></td></tr>
+          <tr><td>Budget</td><td><span class="df-val" data-f="budget">$48,000</span></td></tr>
+          <tr><td>Deadline</td><td><span class="df-val" data-f="deadline">Dec 12, 2026</span></td></tr>
+          <tr><td>Owner</td><td><span class="df-val" data-f="owner">Sana Okafor</span></td></tr>
+        </table>
+        <p class="df-row df-note">Note: total incl. VAT <span class="df-val" data-alt="budget">$52,500</span></p>
+        <div class="df-row df-lines"><i></i><i></i></div>
+        <div class="df-row df-sig"><svg viewBox="0 0 150 52"><path d="M6 36c10-22 22-30 26-22s-14 24-8 26 18-26 26-24-6 22 0 22 12-14 18-14 2 12 8 12 10-18 16-18-2 16 6 16 14-8 20-12"/></svg><small>Sana Okafor · Producer</small></div>
+        <div class="df-scan"></div>
+        <div class="df-stamp"><svg viewBox="0 0 34 34"><path d="M7 18l7 7L28 9"/></svg>IMPORTED</div>
+      </article>
+    </section>
+
+    <form class="df-form" autocomplete="off" onsubmit="return false">
+      <header><h1>New project</h1><p class="df-status" role="status">Draft · 0 of 5 filled</p><button class="df-clear" type="button">Clear</button></header>
+      <label class="df-field"><span>Client</span><input name="client" placeholder="Company"></label>
+      <label class="df-field"><span>Project name</span><input name="name" placeholder="Name the project"></label>
+      <div class="df-field">
+        <label for="df-budget">Budget</label><input id="df-budget" name="budget" placeholder="$0">
+        <button class="df-check" type="button" aria-haspopup="listbox">Check: 2 values found ▾</button>
+        <div class="df-menu" role="listbox">
+          <button type="button" role="option" data-v="$48,000"><b>$48,000</b><span>Budget table</span></button>
+          <button type="button" role="option" data-v="$52,500"><b>$52,500</b><span>Note · incl. VAT</span></button>
+        </div>
+      </div>
+      <label class="df-field"><span>Deadline</span><input name="deadline" placeholder="Pick a date"></label>
+      <label class="df-field"><span>Owner</span><input name="owner" placeholder="Assign someone"></label>
+    </form>
+
+    <div class="df-file" tabindex="0" role="button" aria-label="nwd-brief.pdf — drag onto the zone or press Enter to import">
+      <div class="df-thumb"><i></i><i></i><i></i><i></i><i></i><b>PDF</b></div>
+      <span>nwd-brief.pdf</span>
+    </div>
+  </main>
+  <div class="df-flash" aria-hidden="true"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
